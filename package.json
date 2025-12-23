@@ -1,0 +1,18 @@
+{
+  "name": "photo-collage-maker",
+  "version": "1.0.0",
+  "description": "A lightweight web app for creating beautiful photo collages",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "collage",
+    "photo",
+    "image",
+    "webapp"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Photo Collage Maker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <h1>📸 Collage</h1>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <span class="theme-icon">🌙</span>
+            </button>
+        </header>
+
+        <!-- Main Canvas Area - Center Stage -->
+        <main class="canvas-main">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="collageCanvas"></canvas>
+                <div class="canvas-overlay" id="canvasOverlay"></div>
+                <div class="drop-zone" id="dropZone">
+                    <p>📤 Drop images here</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Menu Bar -->
+        <nav class="bottom-menu">
+            <button class="menu-item active" data-view="collage">
+                <span class="menu-icon">🖼️</span>
+                <span class="menu-label">Collage</span>
+            </button>
+            <button class="menu-item" data-view="add">
+                <span class="menu-icon">➕</span>
+                <span class="menu-label">Add</span>
+            </button>
+            <button class="menu-item" data-view="adjust">
+                <span class="menu-icon">⚙️</span>
+                <span class="menu-label">Adjust</span>
+            </button>
+            <button class="menu-item" data-view="download">
+                <span class="menu-icon">💾</span>
+                <span class="menu-label">Save</span>
+            </button>
+        </nav>
+
+        <!-- Collage View Panel -->
+        <div class="view-panel active" id="collageView">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <div class="mode-toggle">
+                    <button class="mode-btn" id="autoModeBtn" data-mode="auto">Auto Layout</button>
+                    <button class="mode-btn active" id="freeModeBtn" data-mode="free">Free Move</button>
+                </div>
+                <div class="quick-actions">
+                    <button class="action-btn" id="randomizeBtn">🎲 Randomize</button>
+                    <button class="action-btn" id="clearBtn">🗑️ Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add View Panel -->
+        <div class="view-panel" id="addView">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <div class="add-section">
+                    <button class="add-btn primary" id="fileUploadBtn">
+                        <span class="icon">📷</span>
+                        <span>Choose Photos</span>
+                    </button>
+                    <input type="file" id="fileUpload" multiple accept="image/*" style="display: none;">
+                    
+                    <button class="add-btn secondary" id="iCloudUploadBtn">
+                        <span class="icon">☁️</span>
+                        <span>iCloud Photos</span>
+                    </button>
+                    <input type="file" id="iCloudUpload" multiple accept="image/*" style="display: none;">
+                </div>
+
+                <div class="search-section">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search images...">
+                        <button class="search-btn" id="searchBtn">🔍</button>
+                    </div>
+                    <div class="search-results" id="searchResults">
+                        <p class="hint">Search for images to add</p>
+                    </div>
+                </div>
+
+                <div class="selected-images" id="selectedImagesSection">
+                    <h3>Selected (<span id="imageCount">0</span>)</h3>
+                    <div class="image-thumbnails" id="imageThumbnails"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adjust View Panel -->
+        <div class="view-panel" id="adjustView">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <div class="adjust-section">
+                    <h3>Layout</h3>
+                    <select id="layoutSelect" class="control-select">
+                        <option value="grid">Grid</option>
+                        <option value="random">Random</option>
+                        <option value="masonry">Masonry</option>
+                        <option value="spiral">Spiral</option>
+                    </select>
+                </div>
+
+                <div class="adjust-section">
+                    <h3>Border</h3>
+                    <div class="control-row">
+                        <label>Width</label>
+                        <div class="slider-container">
+                            <input type="range" id="borderWidth" min="0" max="20" value="5" class="slider">
+                            <span id="borderWidthValue">5px</span>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <label>Color</label>
+                        <input type="color" id="borderColor" value="#ffffff" class="color-picker">
+                    </div>
+                </div>
+
+                <div class="adjust-section">
+                    <h3>Spacing</h3>
+                    <div class="control-row">
+                        <label>Gap</label>
+                        <div class="slider-container">
+                            <input type="range" id="spacing" min="0" max="30" value="10" class="slider">
+                            <span id="spacingValue">10px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="adjust-section">
+                    <h3>Canvas Size</h3>
+                    <div class="control-row">
+                        <label>Width</label>
+                        <input type="number" id="canvasWidth" min="400" max="4000" value="1200" class="number-input">
+                    </div>
+                    <div class="control-row">
+                        <label>Height</label>
+                        <input type="number" id="canvasHeight" min="400" max="4000" value="1200" class="number-input">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download View Panel -->
+        <div class="view-panel" id="downloadView">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <div class="download-section">
+                    <h3>Save Your Collage</h3>
+                    <button class="download-btn" id="downloadBtn" disabled>
+                        <span class="icon">💾</span>
+                        <span>Download PNG</span>
+                    </button>
+                    <p class="hint">Your collage will be saved as a high-resolution PNG image</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
