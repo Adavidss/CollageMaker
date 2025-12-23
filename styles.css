@@ -54,8 +54,8 @@ body {
     padding: 12px 20px;
     box-shadow: var(--shadow);
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 12px;
     z-index: 100;
     position: relative;
 }
@@ -64,6 +64,41 @@ body {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--text);
+    flex: 1;
+    text-align: center;
+}
+
+.camera-icon-btn {
+    background: none;
+    border: none;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    border-radius: 8px;
+    color: var(--text);
+}
+
+.camera-icon-btn:active {
+    transform: scale(0.95);
+    background: var(--bg);
+}
+
+.camera-icon-btn span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.camera-icon-btn span svg {
+    width: 100%;
+    height: 100%;
 }
 
 .theme-toggle {
@@ -85,7 +120,16 @@ body {
 }
 
 .theme-icon {
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.theme-icon svg {
+    width: 100%;
+    height: 100%;
 }
 
 /* Main Canvas Area - Center Stage */
@@ -97,6 +141,7 @@ body {
     overflow: hidden;
     background: var(--bg);
     padding: 16px;
+    padding-bottom: calc(80px + 16px); /* Space for bottom menu */
     position: relative;
 }
 
@@ -114,6 +159,8 @@ body {
     box-shadow: var(--shadow-lg);
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    transition: transform 0.1s ease-out;
+    transform-origin: center center;
 }
 
 #collageCanvas {
@@ -176,32 +223,137 @@ body {
 /* Bottom Menu Bar */
 .bottom-menu {
     background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-around;
+    border-top: 2px solid var(--border);
+    display: flex !important;
     align-items: center;
-    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-    z-index: 100;
-    position: relative;
+    justify-content: space-between;
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 300;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    visibility: visible !important;
+    opacity: 1 !important;
+    gap: 8px;
 }
 
-.menu-item {
-    flex: 1;
+.menu-left,
+.menu-right {
     display: flex;
-    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.menu-left {
+    justify-content: flex-start;
+}
+
+.menu-right {
+    justify-content: flex-end;
+}
+
+.menu-center {
+    display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+    .menu-center {
+        display: none;
+    }
+}
+
+.menu-actions {
+    display: flex;
     gap: 4px;
-    padding: 8px 12px;
-    background: none;
+    flex-shrink: 0;
+}
+
+.menu-zoom {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.zoom-btn-inline {
+    width: 32px;
+    height: 32px;
     border: none;
-    color: var(--text-light);
+    background: transparent;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
     touch-action: manipulation;
-    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: var(--text);
+}
+
+.zoom-btn-inline:active {
+    transform: scale(0.95);
+    background: var(--surface);
+}
+
+.zoom-btn-inline span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+}
+
+.zoom-btn-inline span svg {
+    width: 100%;
+    height: 100%;
+}
+
+.zoom-level-inline {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 45px;
+    text-align: center;
+}
+
+.bottom-menu .drag-handle:active {
+    cursor: grabbing;
+}
+
+.menu-item {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 10px;
+    background: none;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    min-height: 50px;
     position: relative;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 5;
+    pointer-events: auto;
+    border-radius: 8px;
+}
+
+.menu-item:hover {
+    background: var(--bg);
 }
 
 .menu-item:active {
@@ -211,15 +363,102 @@ body {
 
 .menu-item.active {
     color: var(--primary);
+    font-weight: 600;
+}
+
+.menu-item.active .menu-icon {
+    transform: scale(1.1);
 }
 
 .menu-icon {
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    transition: transform 0.2s;
+}
+
+.menu-icon svg {
+    width: 100%;
+    height: 100%;
 }
 
 .menu-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 500;
+    display: block;
+}
+
+/* Mode Toggle Inline */
+.mode-toggle-inline {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.mode-btn-inline {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    white-space: nowrap;
+}
+
+.mode-btn-inline.active {
+    background: var(--surface);
+    color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.mode-btn-inline:active {
+    transform: scale(0.95);
+}
+
+/* Action Buttons Inline */
+.action-btn-inline {
+    padding: 8px 10px;
+    border: none;
+    background: var(--bg);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+}
+
+.action-btn-inline span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.action-btn-inline span svg {
+    width: 100%;
+    height: 100%;
+}
+
+.action-btn-inline:hover {
+    background: var(--border);
+}
+
+.action-btn-inline:active {
+    transform: scale(0.95);
 }
 
 /* View Panels */
@@ -239,6 +478,12 @@ body {
     padding-bottom: calc(80px + max(16px, env(safe-area-inset-bottom)));
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
     border-radius: 20px 20px 0 0;
+    pointer-events: none;
+}
+
+.view-panel.active {
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .view-panel.active {
@@ -262,59 +507,7 @@ body {
     padding: 20px;
 }
 
-/* Collage View */
-.mode-toggle {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    background: var(--bg);
-    padding: 4px;
-    border-radius: 12px;
-}
-
-.mode-btn {
-    flex: 1;
-    padding: 12px 16px;
-    border: none;
-    background: transparent;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-light);
-    cursor: pointer;
-    transition: all 0.2s;
-    touch-action: manipulation;
-}
-
-.mode-btn.active {
-    background: var(--surface);
-    color: var(--primary);
-    box-shadow: var(--shadow);
-}
-
-.quick-actions {
-    display: flex;
-    gap: 12px;
-}
-
-.action-btn {
-    flex: 1;
-    padding: 14px 20px;
-    border: none;
-    border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    background: var(--bg);
-    color: var(--text);
-    border: 2px solid var(--border);
-    touch-action: manipulation;
-    transition: all 0.2s;
-}
-
-.action-btn:active {
-    transform: scale(0.98);
-}
+/* Old Collage View styles removed - controls moved to menu bar */
 
 /* Add View */
 .add-section {
@@ -353,6 +546,19 @@ body {
     transform: scale(0.98);
 }
 
+.add-btn .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.add-btn .icon svg {
+    width: 100%;
+    height: 100%;
+}
+
 .search-section {
     margin-bottom: 24px;
 }
@@ -384,9 +590,25 @@ body {
     color: white;
     border: none;
     border-radius: 12px;
-    font-size: 1.2rem;
     cursor: pointer;
     touch-action: manipulation;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+}
+
+.search-btn span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.search-btn span svg {
+    width: 100%;
+    height: 100%;
 }
 
 .search-results {
@@ -615,6 +837,113 @@ body {
     cursor: not-allowed;
 }
 
+.download-btn.mobile-save {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.download-btn .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.download-btn .icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Quick Actions Menu */
+.quick-actions-menu {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 12px;
+    display: none;
+    flex-direction: row;
+    gap: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 250;
+}
+
+.quick-actions-menu.visible {
+    display: flex;
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    min-width: 60px;
+}
+
+.quick-action-btn:active {
+    transform: scale(0.95);
+    background: var(--border);
+}
+
+.quick-action-btn span:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.quick-action-btn span:first-child svg {
+    width: 100%;
+    height: 100%;
+}
+
+.quick-action-btn span:last-child {
+    font-size: 0.7rem;
+    color: var(--text);
+}
+
+
+/* Resize Handles */
+.resize-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--primary);
+    border: 2px solid white;
+    border-radius: 50%;
+    cursor: nwse-resize;
+    z-index: 30;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.resize-handle.se {
+    cursor: nwse-resize;
+}
+
+.resize-handle.sw {
+    cursor: nesw-resize;
+}
+
+.resize-handle.ne {
+    cursor: nesw-resize;
+}
+
+.resize-handle.nw {
+    cursor: nwse-resize;
+}
+
 .hint {
     text-align: center;
     color: var(--text-light);
@@ -679,10 +1008,89 @@ body {
     z-index: 21;
 }
 
+/* Mobile adjustments */
+@media (max-width: 480px) {
+    .menu-label {
+        font-size: 0.65rem;
+    }
+    
+    .menu-icon {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .mode-btn-inline {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .action-btn-inline {
+        padding: 6px 8px;
+        min-width: 32px;
+        min-height: 32px;
+    }
+    
+    .action-btn-inline span {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .menu-item {
+        padding: 6px 8px;
+        min-height: 48px;
+    }
+    
+    .bottom-menu {
+        padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+        gap: 4px;
+    }
+    
+    .menu-zoom {
+        padding: 2px;
+        gap: 2px;
+    }
+    
+    .zoom-btn-inline {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .zoom-btn-inline span {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .zoom-level-inline {
+        font-size: 0.7rem;
+        min-width: 40px;
+    }
+    
+    .quick-actions-menu {
+        bottom: 70px;
+        padding: 10px;
+        gap: 6px;
+    }
+    
+    .quick-action-btn {
+        padding: 6px 10px;
+        min-width: 55px;
+    }
+    
+    .quick-action-btn span:first-child {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .quick-action-btn span:last-child {
+        font-size: 0.65rem;
+    }
+}
+
 /* Desktop Styles */
 @media (min-width: 768px) {
     .canvas-main {
         padding: 24px;
+        padding-bottom: calc(80px + 24px);
     }
 
     .view-panel {

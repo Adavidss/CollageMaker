@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Collage Maker">
+    <link rel="apple-touch-icon" href="https://www.kidsdc.org/CollageMaker/CollageApp.png">
     <title>Photo Collage Maker</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -12,9 +14,12 @@
     <div class="app-container">
         <!-- Top Bar -->
         <header class="top-bar">
-            <h1>📸 Collage</h1>
+            <button class="camera-icon-btn" id="cameraIconBtn" aria-label="Camera">
+                <span data-icon="camera"></span>
+            </button>
+            <h1>Collage</h1>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-                <span class="theme-icon">🌙</span>
+                <span class="theme-icon" data-icon="moon"></span>
             </button>
         </header>
 
@@ -30,37 +35,49 @@
         </main>
 
         <!-- Bottom Menu Bar -->
-        <nav class="bottom-menu">
-            <button class="menu-item active" data-view="collage">
-                <span class="menu-icon">🖼️</span>
-                <span class="menu-label">Collage</span>
-            </button>
-            <button class="menu-item" data-view="add">
-                <span class="menu-icon">➕</span>
-                <span class="menu-label">Add</span>
-            </button>
-            <button class="menu-item" data-view="adjust">
-                <span class="menu-icon">⚙️</span>
-                <span class="menu-label">Adjust</span>
-            </button>
-            <button class="menu-item" data-view="download">
-                <span class="menu-icon">💾</span>
-                <span class="menu-label">Save</span>
-            </button>
+        <nav class="bottom-menu" id="bottomMenu">
+            <div class="menu-left">
+                <button class="menu-item active" data-view="collage">
+                    <span class="menu-icon" data-icon="collage"></span>
+                    <span class="menu-label">Collage</span>
+                </button>
+                <button class="menu-item" data-view="add">
+                    <span class="menu-icon" data-icon="add"></span>
+                    <span class="menu-label">Add</span>
+                </button>
+            </div>
+            <div class="menu-center">
+                <div class="mode-toggle-inline">
+                    <button class="mode-btn-inline" id="autoModeBtn" data-mode="auto">Auto</button>
+                    <button class="mode-btn-inline active" id="freeModeBtn" data-mode="free">Free</button>
+                </div>
+            </div>
+            <div class="menu-right">
+                <button class="menu-item" data-view="adjust">
+                    <span class="menu-icon" data-icon="settings"></span>
+                    <span class="menu-label">Adjust</span>
+                </button>
+                <button class="menu-item" data-view="download">
+                    <span class="menu-icon" data-icon="save"></span>
+                    <span class="menu-label">Save</span>
+                </button>
+            </div>
+            <div class="menu-actions">
+                <button class="action-btn-inline" id="randomizeBtn" title="Randomize"><span data-icon="randomize"></span></button>
+                <button class="action-btn-inline" id="clearBtn" title="Clear"><span data-icon="blank"></span></button>
+            </div>
+            <div class="menu-zoom">
+                <button class="zoom-btn-inline" id="zoomOutBtn" title="Zoom Out"><span data-icon="zoomOut"></span></button>
+                <span class="zoom-level-inline" id="zoomLevel">100%</span>
+                <button class="zoom-btn-inline" id="zoomInBtn" title="Zoom In"><span data-icon="zoomIn"></span></button>
+            </div>
         </nav>
 
-        <!-- Collage View Panel -->
-        <div class="view-panel active" id="collageView">
+        <!-- Collage View Panel - Empty, controls moved to menu bar -->
+        <div class="view-panel" id="collageView">
             <div class="panel-handle"></div>
             <div class="panel-content">
-                <div class="mode-toggle">
-                    <button class="mode-btn" id="autoModeBtn" data-mode="auto">Auto Layout</button>
-                    <button class="mode-btn active" id="freeModeBtn" data-mode="free">Free Move</button>
-                </div>
-                <div class="quick-actions">
-                    <button class="action-btn" id="randomizeBtn">🎲 Randomize</button>
-                    <button class="action-btn" id="clearBtn">🗑️ Clear</button>
-                </div>
+                <p class="hint">Use the controls in the menu bar below</p>
             </div>
         </div>
 
@@ -70,13 +87,13 @@
             <div class="panel-content">
                 <div class="add-section">
                     <button class="add-btn primary" id="fileUploadBtn">
-                        <span class="icon">📷</span>
+                        <span class="icon" data-icon="camera"></span>
                         <span>Choose Photos</span>
                     </button>
                     <input type="file" id="fileUpload" multiple accept="image/*" style="display: none;">
                     
                     <button class="add-btn secondary" id="iCloudUploadBtn">
-                        <span class="icon">☁️</span>
+                        <span class="icon" data-icon="cloud"></span>
                         <span>iCloud Photos</span>
                     </button>
                     <input type="file" id="iCloudUpload" multiple accept="image/*" style="display: none;">
@@ -85,7 +102,7 @@
                 <div class="search-section">
                     <div class="search-box">
                         <input type="text" id="searchInput" placeholder="Search images...">
-                        <button class="search-btn" id="searchBtn">🔍</button>
+                        <button class="search-btn" id="searchBtn"><span data-icon="search"></span></button>
                     </div>
                     <div class="search-results" id="searchResults">
                         <p class="hint">Search for images to add</p>
@@ -160,13 +177,38 @@
                 <div class="download-section">
                     <h3>Save Your Collage</h3>
                     <button class="download-btn" id="downloadBtn" disabled>
-                        <span class="icon">💾</span>
+                        <span class="icon" data-icon="save"></span>
                         <span>Download PNG</span>
+                    </button>
+                    <button class="download-btn mobile-save" id="saveToPhotosBtn" disabled>
+                        <span class="icon" data-icon="mobile"></span>
+                        <span>Save to Photos</span>
                     </button>
                     <p class="hint">Your collage will be saved as a high-resolution PNG image</p>
                 </div>
             </div>
         </div>
+
+        <!-- Quick Actions Menu for Selected Image -->
+        <div class="quick-actions-menu" id="quickActionsMenu">
+            <button class="quick-action-btn" id="duplicateBtn" title="Duplicate">
+                <span data-icon="duplicate"></span>
+                <span>Duplicate</span>
+            </button>
+            <button class="quick-action-btn" id="deleteSelectedBtn" title="Delete">
+                <span data-icon="trash"></span>
+                <span>Delete</span>
+            </button>
+            <button class="quick-action-btn" id="bringForwardBtn" title="Bring Forward">
+                <span data-icon="forward"></span>
+                <span>Forward</span>
+            </button>
+            <button class="quick-action-btn" id="sendBackwardBtn" title="Send Backward">
+                <span data-icon="backward"></span>
+                <span>Backward</span>
+            </button>
+        </div>
+
 
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="loadingOverlay">
@@ -175,6 +217,7 @@
         </div>
     </div>
 
+    <script src="icons.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

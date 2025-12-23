@@ -22,16 +22,35 @@ class CollageMaker {
         this.dragTarget = null;
         this.dragOffset = { x: 0, y: 0 };
         this.selectedImageIndex = null;
+        this.resizing = false;
+        this.resizeHandle = null;
+        this.canvasScale = 1;
+        this.canvasOffset = { x: 0, y: 0 };
+        this.isZooming = false;
+        this.lastPinchDistance = 0;
         
         this.init();
     }
 
     init() {
         this.loadTheme();
+        this.initializeIcons();
         this.setupEventListeners();
         this.setupBottomMenu();
         this.setupCanvasInteraction();
         this.updateCanvasSize();
+    }
+
+    initializeIcons() {
+        // Replace all data-icon attributes with SVG icons
+        document.querySelectorAll('[data-icon]').forEach(el => {
+            const iconName = el.getAttribute('data-icon');
+            if (typeof Icons !== 'undefined' && Icons[iconName]) {
+                el.innerHTML = Icons[iconName];
+            } else if (window.Icons && window.Icons[iconName]) {
+                el.innerHTML = window.Icons[iconName];
+            }
+        });
     }
 
     loadTheme() {
@@ -50,13 +69,17 @@ class CollageMaker {
 
     updateThemeIcon(theme) {
         const icon = document.querySelector('.theme-icon');
-        icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        const icons = typeof Icons !== 'undefined' ? Icons : window.Icons;
+        if (icons) {
+            icon.innerHTML = theme === 'dark' ? icons.sun : icons.moon;
+        }
     }
 
     setupBottomMenu() {
         const menuItems = document.querySelectorAll('.menu-item');
         const viewPanels = document.querySelectorAll('.view-panel');
 
+        // Menu item clicks
         menuItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -74,9 +97,13 @@ class CollageMaker {
                 menuItems.forEach(m => m.classList.remove('active'));
                 item.classList.add('active');
                 
-                // Update view panels
+                // Update view panels - hide all first
                 viewPanels.forEach(panel => panel.classList.remove('active'));
-                targetPanel.classList.add('active');
+                
+                // Only show panel if it's not the collage view (which is empty)
+                if (view !== 'collage') {
+                    targetPanel.classList.add('active');
+                }
             });
         });
     }
@@ -137,8 +164,20 @@ class CollageMaker {
     handleCanvasMouseDown(e) {
         if (this.mode !== 'free') return;
         const coords = this.getCanvasCoordinates(e);
-        const hit = this.findImageAtPosition(coords.x, coords.y);
         
+        // Check for resize handle first
+        const resizeHandle = this.findResizeHandleAtPosition(coords.x, coords.y);
+        if (resizeHandle) {
+            this.resizing = true;
+            this.resizeHandle = resizeHandle;
+            this.dragTarget = this.selectedImageIndex;
+            this.dragOffset = { x: coords.x, y: coords.y };
+            this.canvas.style.cursor = 'nwse-resize';
+            return;
+        }
+        
+        // Check for image click
+        const hit = this.findImageAtPosition(coords.x, coords.y);
         if (hit) {
             this.dragging = true;
             this.dragTarget = hit.index;
@@ -148,12 +187,56 @@ class CollageMaker {
                 y: coords.y - hit.position.y
             };
             this.canvas.style.cursor = 'grabbing';
+            this.showQuickActions();
+            this.render();
+        } else {
+            // Deselect if clicking empty space
+            this.selectedImageIndex = null;
+            this.hideQuickActions();
             this.render();
         }
     }
 
     handleCanvasMouseMove(e) {
-        if (this.dragging && this.dragTarget !== null) {
+        if (this.resizing && this.dragTarget !== null) {
+            const coords = this.getCanvasCoordinates(e);
+            const pos = this.imagePositions[this.dragTarget];
+            const imgData = this.images[this.dragTarget];
+            const aspectRatio = imgData.width / imgData.height;
+            
+            const deltaX = coords.x - this.dragOffset.x;
+            const deltaY = coords.y - this.dragOffset.y;
+            
+            switch (this.resizeHandle) {
+                case 'se':
+                    pos.width = Math.max(50, Math.min(pos.width + deltaX, this.canvas.width - pos.x));
+                    pos.height = pos.width / aspectRatio;
+                    break;
+                case 'sw':
+                    pos.width = Math.max(50, Math.min(pos.width - deltaX, pos.x + pos.width));
+                    pos.height = pos.width / aspectRatio;
+                    pos.x = coords.x - (pos.width - (coords.x - this.dragOffset.x));
+                    break;
+                case 'ne':
+                    pos.width = Math.max(50, Math.min(pos.width + deltaX, this.canvas.width - pos.x));
+                    pos.height = pos.width / aspectRatio;
+                    pos.y = coords.y - (pos.height - (coords.y - this.dragOffset.y));
+                    break;
+                case 'nw':
+                    pos.width = Math.max(50, Math.min(pos.width - deltaX, pos.x + pos.width));
+                    pos.height = pos.width / aspectRatio;
+                    pos.x = coords.x;
+                    pos.y = coords.y;
+                    break;
+            }
+            
+            // Keep within bounds
+            pos.x = Math.max(0, Math.min(pos.x, this.canvas.width - pos.width));
+            pos.y = Math.max(0, Math.min(pos.y, this.canvas.height - pos.height));
+            
+            this.dragOffset = { x: coords.x, y: coords.y };
+            this.render();
+        } else if (this.dragging && this.dragTarget !== null) {
             const coords = this.getCanvasCoordinates(e);
             const pos = this.imagePositions[this.dragTarget];
             
@@ -167,8 +250,13 @@ class CollageMaker {
             this.render();
         } else if (this.mode === 'free') {
             const coords = this.getCanvasCoordinates(e);
-            const hit = this.findImageAtPosition(coords.x, coords.y);
-            this.canvas.style.cursor = hit ? 'grab' : 'default';
+            const resizeHandle = this.findResizeHandleAtPosition(coords.x, coords.y);
+            if (resizeHandle) {
+                this.canvas.style.cursor = 'nwse-resize';
+            } else {
+                const hit = this.findImageAtPosition(coords.x, coords.y);
+                this.canvas.style.cursor = hit ? 'grab' : 'default';
+            }
         }
     }
 
@@ -178,13 +266,30 @@ class CollageMaker {
             this.dragTarget = null;
             this.canvas.style.cursor = 'default';
         }
+        if (this.resizing) {
+            this.resizing = false;
+            this.resizeHandle = null;
+            this.dragTarget = null;
+            this.canvas.style.cursor = 'default';
+        }
     }
 
     handleCanvasTouchStart(e) {
-        if (this.mode !== 'free') return;
+        if (this.mode !== 'free' || e.touches.length > 1) return;
         const coords = this.getCanvasCoordinates(e);
-        const hit = this.findImageAtPosition(coords.x, coords.y);
         
+        // Check for resize handle first
+        const resizeHandle = this.findResizeHandleAtPosition(coords.x, coords.y);
+        if (resizeHandle) {
+            this.resizing = true;
+            this.resizeHandle = resizeHandle;
+            this.dragTarget = this.selectedImageIndex;
+            this.dragOffset = { x: coords.x, y: coords.y };
+            return;
+        }
+        
+        // Check for image click
+        const hit = this.findImageAtPosition(coords.x, coords.y);
         if (hit) {
             this.dragging = true;
             this.dragTarget = hit.index;
@@ -193,12 +298,56 @@ class CollageMaker {
                 x: coords.x - hit.position.x,
                 y: coords.y - hit.position.y
             };
+            this.showQuickActions();
+            this.render();
+        } else {
+            this.selectedImageIndex = null;
+            this.hideQuickActions();
             this.render();
         }
     }
 
     handleCanvasTouchMove(e) {
-        if (this.dragging && this.dragTarget !== null) {
+        if (e.touches.length > 1) return; // Let pinch zoom handle multi-touch
+        
+        if (this.resizing && this.dragTarget !== null) {
+            const coords = this.getCanvasCoordinates(e);
+            const pos = this.imagePositions[this.dragTarget];
+            const imgData = this.images[this.dragTarget];
+            const aspectRatio = imgData.width / imgData.height;
+            
+            const deltaX = coords.x - this.dragOffset.x;
+            const deltaY = coords.y - this.dragOffset.y;
+            
+            switch (this.resizeHandle) {
+                case 'se':
+                    pos.width = Math.max(50, Math.min(pos.width + deltaX, this.canvas.width - pos.x));
+                    pos.height = pos.width / aspectRatio;
+                    break;
+                case 'sw':
+                    pos.width = Math.max(50, Math.min(pos.width - deltaX, pos.x + pos.width));
+                    pos.height = pos.width / aspectRatio;
+                    pos.x = coords.x - (pos.width - (coords.x - this.dragOffset.x));
+                    break;
+                case 'ne':
+                    pos.width = Math.max(50, Math.min(pos.width + deltaX, this.canvas.width - pos.x));
+                    pos.height = pos.width / aspectRatio;
+                    pos.y = coords.y - (pos.height - (coords.y - this.dragOffset.y));
+                    break;
+                case 'nw':
+                    pos.width = Math.max(50, Math.min(pos.width - deltaX, pos.x + pos.width));
+                    pos.height = pos.width / aspectRatio;
+                    pos.x = coords.x;
+                    pos.y = coords.y;
+                    break;
+            }
+            
+            pos.x = Math.max(0, Math.min(pos.x, this.canvas.width - pos.width));
+            pos.y = Math.max(0, Math.min(pos.y, this.canvas.height - pos.height));
+            
+            this.dragOffset = { x: coords.x, y: coords.y };
+            this.render();
+        } else if (this.dragging && this.dragTarget !== null) {
             const coords = this.getCanvasCoordinates(e);
             const pos = this.imagePositions[this.dragTarget];
             
@@ -217,15 +366,34 @@ class CollageMaker {
             this.dragging = false;
             this.dragTarget = null;
         }
+        if (this.resizing) {
+            this.resizing = false;
+            this.resizeHandle = null;
+            this.dragTarget = null;
+        }
     }
 
     setupEventListeners() {
         // Theme toggle
         document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
 
-        // Mode toggle
-        document.getElementById('autoModeBtn').addEventListener('click', () => this.setMode('auto'));
-        document.getElementById('freeModeBtn').addEventListener('click', () => this.setMode('free'));
+        // Mode toggle (inline buttons in menu bar)
+        const autoModeBtn = document.getElementById('autoModeBtn');
+        const freeModeBtn = document.getElementById('freeModeBtn');
+        
+        autoModeBtn.addEventListener('click', () => {
+            this.setMode('auto');
+            autoModeBtn.classList.remove('active');
+            freeModeBtn.classList.remove('active');
+            autoModeBtn.classList.add('active');
+        });
+        
+        freeModeBtn.addEventListener('click', () => {
+            this.setMode('free');
+            autoModeBtn.classList.remove('active');
+            freeModeBtn.classList.remove('active');
+            freeModeBtn.classList.add('active');
+        });
 
         // File uploads
         document.getElementById('fileUploadBtn').addEventListener('click', () => {
@@ -297,6 +465,26 @@ class CollageMaker {
         });
         document.getElementById('clearBtn').addEventListener('click', () => this.clearAll());
         document.getElementById('downloadBtn').addEventListener('click', () => this.downloadCollage());
+        document.getElementById('saveToPhotosBtn').addEventListener('click', () => this.saveToPhotos());
+        
+        // Quick actions
+        document.getElementById('duplicateBtn').addEventListener('click', () => this.duplicateSelected());
+        document.getElementById('deleteSelectedBtn').addEventListener('click', () => this.deleteSelected());
+        document.getElementById('bringForwardBtn').addEventListener('click', () => this.bringForward());
+        document.getElementById('sendBackwardBtn').addEventListener('click', () => this.sendBackward());
+        
+        // Zoom controls (now in menu bar)
+        document.getElementById('zoomInBtn').addEventListener('click', () => this.zoomIn());
+        document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoomOut());
+        
+        // Camera icon button (opens file upload)
+        document.getElementById('cameraIconBtn').addEventListener('click', () => {
+            document.getElementById('fileUpload').click();
+        });
+        
+        // Pinch zoom
+        this.setupPinchZoom();
+        this.setupDoubleTapZoom();
 
         // Drag and drop
         const canvasWrapper = document.getElementById('canvasWrapper');
@@ -323,8 +511,6 @@ class CollageMaker {
 
     setMode(mode) {
         this.mode = mode;
-        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(mode + 'ModeBtn').classList.add('active');
         
         if (mode === 'auto') {
             this.generateCollage();
@@ -657,6 +843,12 @@ class CollageMaker {
     removeImage(index) {
         this.images.splice(index, 1);
         this.imagePositions.splice(index, 1);
+        if (this.selectedImageIndex === index) {
+            this.selectedImageIndex = null;
+            this.hideQuickActions();
+        } else if (this.selectedImageIndex > index) {
+            this.selectedImageIndex--;
+        }
         this.updateImageList();
         if (this.images.length > 0) {
             if (this.mode === 'free') {
@@ -689,6 +881,7 @@ class CollageMaker {
         }
         
         document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('saveToPhotosBtn').disabled = false;
     }
 
     renderFreeMode() {
@@ -696,8 +889,62 @@ class CollageMaker {
             if (this.imagePositions[index]) {
                 const pos = this.imagePositions[index];
                 this.drawImage(imgData, pos.x, pos.y, pos.width, pos.height);
+                
+                // Draw selection border and resize handles if selected
+                if (this.selectedImageIndex === index) {
+                    this.drawSelectionBorder(pos);
+                }
             }
         });
+    }
+
+    drawSelectionBorder(pos) {
+        // Draw selection border
+        this.ctx.strokeStyle = this.borderColor || '#667eea';
+        this.ctx.lineWidth = 3;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(pos.x - 5, pos.y - 5, pos.width + 10, pos.height + 10);
+        this.ctx.setLineDash([]);
+        
+        // Draw resize handles (corners)
+        const handleSize = 12;
+        const handles = [
+            { x: pos.x, y: pos.y }, // top-left
+            { x: pos.x + pos.width, y: pos.y }, // top-right
+            { x: pos.x, y: pos.y + pos.height }, // bottom-left
+            { x: pos.x + pos.width, y: pos.y + pos.height } // bottom-right
+        ];
+        
+        handles.forEach(handle => {
+            this.ctx.fillStyle = '#667eea';
+            this.ctx.fillRect(handle.x - handleSize/2, handle.y - handleSize/2, handleSize, handleSize);
+            this.ctx.strokeStyle = 'white';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(handle.x - handleSize/2, handle.y - handleSize/2, handleSize, handleSize);
+        });
+    }
+
+    findResizeHandleAtPosition(x, y) {
+        if (this.selectedImageIndex === null) return null;
+        const pos = this.imagePositions[this.selectedImageIndex];
+        const handleSize = 12;
+        const threshold = handleSize + 5;
+        
+        const handles = [
+            { corner: 'nw', x: pos.x, y: pos.y },
+            { corner: 'ne', x: pos.x + pos.width, y: pos.y },
+            { corner: 'sw', x: pos.x, y: pos.y + pos.height },
+            { corner: 'se', x: pos.x + pos.width, y: pos.y + pos.height }
+        ];
+        
+        for (const handle of handles) {
+            const dx = x - handle.x;
+            const dy = y - handle.y;
+            if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
+                return handle.corner;
+            }
+        }
+        return null;
     }
 
     generateCollage() {
@@ -723,6 +970,7 @@ class CollageMaker {
         }
         
         document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('saveToPhotosBtn').disabled = false;
     }
 
     clearCanvas() {
@@ -858,9 +1106,12 @@ class CollageMaker {
     clearAll() {
         this.images = [];
         this.imagePositions = [];
+        this.selectedImageIndex = null;
+        this.hideQuickActions();
         this.updateImageList();
         this.clearCanvas();
         document.getElementById('downloadBtn').disabled = true;
+        document.getElementById('saveToPhotosBtn').disabled = true;
         document.getElementById('fileUpload').value = '';
         document.getElementById('iCloudUpload').value = '';
         document.getElementById('searchInput').value = '';
@@ -873,6 +1124,186 @@ class CollageMaker {
 
     hideLoading() {
         document.getElementById('loadingOverlay').classList.remove('active');
+    }
+
+    showQuickActions() {
+        if (this.selectedImageIndex !== null) {
+            document.getElementById('quickActionsMenu').classList.add('visible');
+        }
+    }
+
+    hideQuickActions() {
+        document.getElementById('quickActionsMenu').classList.remove('visible');
+    }
+
+    duplicateSelected() {
+        if (this.selectedImageIndex === null) return;
+        
+        const imgData = this.images[this.selectedImageIndex];
+        const pos = this.imagePositions[this.selectedImageIndex];
+        
+        this.images.push({
+            element: imgData.element,
+            width: imgData.width,
+            height: imgData.height,
+            source: imgData.source
+        });
+        
+        this.imagePositions.push({
+            x: pos.x + 20,
+            y: pos.y + 20,
+            width: pos.width,
+            height: pos.height
+        });
+        
+        this.selectedImageIndex = this.images.length - 1;
+        this.updateImageList();
+        this.render();
+    }
+
+    deleteSelected() {
+        if (this.selectedImageIndex === null) return;
+        this.removeImage(this.selectedImageIndex);
+        this.selectedImageIndex = null;
+        this.hideQuickActions();
+    }
+
+    bringForward() {
+        if (this.selectedImageIndex === null || this.selectedImageIndex === this.images.length - 1) return;
+        
+        const index = this.selectedImageIndex;
+        [this.images[index], this.images[index + 1]] = [this.images[index + 1], this.images[index]];
+        [this.imagePositions[index], this.imagePositions[index + 1]] = [this.imagePositions[index + 1], this.imagePositions[index]];
+        this.selectedImageIndex = index + 1;
+        this.render();
+    }
+
+    sendBackward() {
+        if (this.selectedImageIndex === null || this.selectedImageIndex === 0) return;
+        
+        const index = this.selectedImageIndex;
+        [this.images[index], this.images[index - 1]] = [this.images[index - 1], this.images[index]];
+        [this.imagePositions[index], this.imagePositions[index - 1]] = [this.imagePositions[index - 1], this.imagePositions[index]];
+        this.selectedImageIndex = index - 1;
+        this.render();
+    }
+
+    zoomIn() {
+        this.canvasScale = Math.min(this.canvasScale * 1.2, 3);
+        this.updateZoom();
+    }
+
+    zoomOut() {
+        this.canvasScale = Math.max(this.canvasScale / 1.2, 0.5);
+        this.updateZoom();
+    }
+
+    resetZoom() {
+        this.canvasScale = 1;
+        this.canvasOffset = { x: 0, y: 0 };
+        this.updateZoom();
+    }
+    
+    // Double tap to reset zoom
+    setupDoubleTapZoom() {
+        let lastTap = 0;
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        
+        canvasWrapper.addEventListener('touchend', (e) => {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            
+            if (tapLength < 300 && tapLength > 0) {
+                // Double tap detected
+                this.resetZoom();
+                e.preventDefault();
+            }
+            lastTap = currentTime;
+        });
+    }
+
+    updateZoom() {
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        
+        canvasWrapper.style.transform = `scale(${this.canvasScale})`;
+        canvasWrapper.style.transformOrigin = 'center center';
+        
+        const zoomLevelEl = document.getElementById('zoomLevel');
+        if (zoomLevelEl) {
+            zoomLevelEl.textContent = Math.round(this.canvasScale * 100) + '%';
+        }
+    }
+
+    setupPinchZoom() {
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        let initialDistance = 0;
+        
+        canvasWrapper.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                this.isZooming = true;
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                initialDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                this.lastPinchDistance = initialDistance;
+            }
+        });
+        
+        canvasWrapper.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && this.isZooming) {
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                const scaleChange = currentDistance / this.lastPinchDistance;
+                this.canvasScale = Math.max(0.5, Math.min(this.canvasScale * scaleChange, 3));
+                this.updateZoom();
+                this.lastPinchDistance = currentDistance;
+            }
+        });
+        
+        canvasWrapper.addEventListener('touchend', () => {
+            this.isZooming = false;
+        });
+    }
+
+    async saveToPhotos() {
+        try {
+            const dataUrl = this.canvas.toDataURL('image/png');
+            
+            // Check if Web Share API is available (mobile)
+            if (navigator.share && navigator.canShare) {
+                const blob = await this.dataURLToBlob(dataUrl);
+                const file = new File([blob], `collage-${Date.now()}.png`, { type: 'image/png' });
+                
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'My Collage',
+                        text: 'Check out my collage!'
+                    });
+                    return;
+                }
+            }
+            
+            // Fallback: download for desktop or if share fails
+            this.downloadCollage();
+        } catch (error) {
+            console.error('Error saving to photos:', error);
+            // Fallback to download
+            this.downloadCollage();
+        }
+    }
+
+    dataURLToBlob(dataURL) {
+        return fetch(dataURL).then(res => res.blob());
     }
 }
 
